@@ -1,1 +1,54 @@
 /* You can add global styles to this file, and also import other style files */
+
+.line-highlight {
+    z-index: 1;
+}
+
+a {
+    color: #2198c9;
+}
+
+.btn-primary {
+    color: #000000;
+    background-color: #d7d2cb !important;
+    border-color: #f76902; /*set the color you want here*/
+}
+.btn-primary:hover, .btn-primary:focus, .btn-primary:active, .btn-primary.active, .open>.dropdown-toggle.btn-primary {
+    color: #000000;
+    background-color: #aca39a;
+    border-color: #f76902; /*set the color you want here*/
+}
+.btn-primary:active {
+    color: #000000 !important;
+    background-color: #aca39a !important;
+    border-color: #000000 !important; 
+}
+
+.card {
+    border-color: #f76902;
+}
+.card-header {
+    background-color: #d7d2cb;
+    border-color: #000000;
+}
+
+.container {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+
+.form-range::-webkit-slider-thumb {
+    background-color: #f76902 !important;
+    box-shadow: solid 10px 10px #000000 !important;
+}
+.form-range::-webkit-slider-thumb:active {
+    background-color: #f76902 !important;
+    box-shadow: 10 10px 10px #000000 !important;
+}
+.form-range::-webkit-slider-runnable-track {
+    background-color: #ece6e3 !important;
+}
+.form-range::-webkit-slider-thumb:focus {
+    background-color: #f76902 !important;
+    box-shadow: 10 10px 10px #000000 !important;
+}

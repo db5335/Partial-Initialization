@@ -1,0 +1,8 @@
+.graph-container {
+    display: flex;
+
+    .graph {
+        width: 50%;
+        aspect-ratio: calc(3 / 2);
+    }
+}

@@ -1,0 +1,16 @@
+<div style="width: 100%; display: flex; justify-content: center;">
+    <h3>{{ state ?? 'State' }}</h3>
+</div>
+
+<div class="graph-container">
+    <div id="graph" class="graph"></div>
+    <div id="tree" class="graph"></div>
+</div>
+
+<input #range id="range" class="form-range" type="range" min="0" [max]="animations.length - 1" step="1" value="0" style="width: 100%;"
+(input)="goTo(+range.value)">
+<!-- oninput="rangeValue.innerText = 'Go to ' + value" (input)="goTo(+range.value)"> -->
+
+<button class="btn btn-primary">Play</button>
+<!-- <button class="btn btn-primary" (click)="play()">Play</button> -->
+
