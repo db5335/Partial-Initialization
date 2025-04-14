@@ -31,6 +31,9 @@ export class AlgorithmService {
   #treeReset: NodeAnimation[] = [];
   #graphReset: NodeAnimation[] = [];
 
+  #ratio = [0, 512, 0];
+  #energy = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
   constructor() { }
 
   createBinaryTree(tree: Graph): void {
@@ -84,8 +87,13 @@ export class AlgorithmService {
       // bins.push(200);
     }
 
-    // bins[0] = 301;
-    // bins[2] = 302;
+    // for (let i = 0; i < 32; i++) {
+    //   bins[i] = 0;
+    // }
+
+
+    // bins[0] = 1;
+    // bins[2] = 2;
     // bins[3] = 303;
     // bins[4] = 304;
     // bins[5] = 305;
@@ -114,7 +122,7 @@ export class AlgorithmService {
       }
       if (i > 0) {
         groups = newGroups;
-        console.log(newGroups.filter(i => i != -1).length)
+        // console.log(newGroups.filter(i => i != -1).length)
       }
       // this.#nodeColors.push(['gray', 'gray', Math.random()]);
       // this.#edgeColors.push([]);
@@ -129,7 +137,38 @@ export class AlgorithmService {
       // }
     }
 
-    animations.push({ nodeAnimations: [], treeAnimations: [] })
+
+    const nodeAnimations: NodeAnimation[] = [];
+    const treeAnimations: NodeAnimation[] = [];
+
+    let initialized = 0;
+    for (let i = 0; i < this.numNodes; i++) {
+      if (groups[i] != -1) {
+        nodeAnimations.push({
+          node: i,
+          from: this.#nodeColors[i],
+          to: this.SUCCESS_COLOR,
+          fromSize: this.#nodeSizes[i],
+          toSize: this.FOCUS_SIZE
+        });
+        initialized++;
+      } else {
+        nodeAnimations.push({
+          node: i,
+          from: this.#nodeColors[i],
+          to: this.COLLISION_COLOR,
+          fromSize: this.#nodeSizes[i],
+          toSize: this.FOCUS_SIZE
+        });
+      }
+    }
+
+    animations.push({ nodeAnimations, treeAnimations, state: `${initialized} Nodes Initialized`, ratio: this.#copyRatio(), energy: this.#copyEnergy() })
+    this.#resetGraph(nodeAnimations);
+    this.#resetTree(treeAnimations);
+
+    animations.push({ nodeAnimations: [], treeAnimations: [], ratio: this.#copyRatio(), energy: this.#copyEnergy() })
+
     return animations;
   }
 
@@ -137,7 +176,6 @@ export class AlgorithmService {
     const animations: GraphAnimation[] = [];
     const nodeAnimations: NodeAnimation[] = [];
     const treeAnimations: NodeAnimation[] = [];
-    animations.push({nodeAnimations, treeAnimations})
 
     this.#resetTree(treeAnimations);
     this.#resetGraph(nodeAnimations);
@@ -157,6 +195,7 @@ export class AlgorithmService {
     });
 
     const initialized = [];
+    let total = 0;
     for (let j = 0; j < 8; j++) {
       const nodes: number[] = [];
 
@@ -165,6 +204,8 @@ export class AlgorithmService {
           nodes.push(k);
         }
       }
+
+      total += nodes.length;
 
       for (const k of nodes) {
         let color = this.COLLISION_COLOR;
@@ -195,11 +236,16 @@ export class AlgorithmService {
       for (const j of initialized) {
         groups[j] = i;
         graph.updateNodeAttribute(`${j}`, 'id', _ => count++);
+        graph.updateNodeAttribute(`${j}`, 'energy', _ => 0);
         graph.updateNodeAttribute(`${j}`, 'count', _ => initialized.length);
         graph.updateNodeAttribute(`${j}`, 'childCount', _ => i % 2 == 0 ? initialized.length : 0);
         // console.log(graph.getNodeAttribute(`${i}`, 'id'))
       }
     }
+
+    const init = initialized.length > 1 ? initialized.length : 0;
+    
+    animations.push({nodeAnimations, treeAnimations, state: `Merging Bins ${8 * i + 1} - ${8 * (i + 1)}`, ratio: this.#newRatio(init, total - init, 0), energy: this.#newEnergy({0: total})})
 
     return animations;
   }
@@ -217,13 +263,14 @@ export class AlgorithmService {
     }
 
     const offsets = [undefined, 32, 8];
+    const groupOffsets = [undefined, 0, 16];
     const responsible: string[] = [];
     for (let i = 0; i < vertices.length; i++) {
       const v = vertices[i];
       if (i < vertices.length / 2) {
         const leftGroup = 2 * (v - offsets[level]!);
         const rightGroup = leftGroup + 1;
-        if (level == 2) console.log(leftGroup, rightGroup);
+        // if (level == 2) console.log(leftGroup, rightGroup);
         const leftNode = graph.nodes().filter(n => groups[+n] === leftGroup && graph.getNodeAttribute(n, 'id') === 1)[0];
         const rightNode = graph.nodes().filter(n => groups[+n] === rightGroup && graph.getNodeAttribute(n, 'id') === 1)[0];
         // console.log(graph.nodes().filter(n => groups[+n] === leftGroup));
@@ -241,7 +288,7 @@ export class AlgorithmService {
         const rightGroup = groups[+responsible[3 * rightIndex + 2]];
         // const id = Math.floor(Math.log2(vertices.length + 1) - Math.log2(i + 1 - (vertices.length) / 2)) + 1;
         const id = Math.floor(Math.log2(vertices.length + 1) - Math.log2(vertices.length - i + 1)) + 1;
-        console.log(leftChild, rightChild, leftIndex, rightIndex, leftGroup, rightGroup, id);
+        // console.log(leftChild, rightChild, leftIndex, rightIndex, leftGroup, rightGroup, id);
         const leftNode = graph.nodes().filter(n => groups[+n] === leftGroup && graph.getNodeAttribute(n, 'id') === id)[0];
         const rightNode = graph.nodes().filter(n => groups[+n] === rightGroup && graph.getNodeAttribute(n, 'id') === id)[0];
         responsible.push(leftNode);
@@ -254,20 +301,20 @@ export class AlgorithmService {
     }
 
 
-    console.log(groups)
-    console.log(responsible);
+    // console.log(groups)
+    // console.log(responsible);
 
     let count = 0;
     let total = 0;
     for (const j of vertices) {
       let nodeAnimations: NodeAnimation[] = [];
       let treeAnimations: NodeAnimation[] = [];
+      let awake = this.#getAwakeObject();
       const leftCount = responsible[count] ? graph.getNodeAttribute(responsible[count], 'count') : 0;
       const rightCount = responsible[count + 1] ? graph.getNodeAttribute(responsible[count + 1], 'count') : 0;
       const totalCount = leftCount + rightCount;
       total = totalCount;
-      animations.push({state: `Left Count: ${leftCount}`, nodeAnimations, treeAnimations});
-
+      
       this.#resetTree(treeAnimations);
       this.#resetGraph(nodeAnimations);
 
@@ -290,6 +337,10 @@ export class AlgorithmService {
         });
         this.#nodeColors[left] = this.SEND_COLOR;
         this.#nodeSizes[left] = this.FOCUS_SIZE;
+        graph.updateNodeAttribute(`${left}`, 'energy', value => {
+          awake[value + 1]++;
+          return value + 1;
+        });
       }
       if (!Number.isNaN(right)) {
         nodeAnimations.push({
@@ -301,11 +352,17 @@ export class AlgorithmService {
         });
         this.#nodeColors[right] = this.LISTEN_COLOR;
         this.#nodeSizes[right] = this.FOCUS_SIZE;
+        graph.updateNodeAttribute(`${right}`, 'energy', value => {
+          awake[value + 1]++;
+          return value + 1;
+        });
       }
 
+      animations.push({state: `Left Count: ${leftCount}`, nodeAnimations, treeAnimations, ratio: this.#copyRatio(), energy: this.#newEnergy(awake)});
+
+      awake = this.#getAwakeObject();
       nodeAnimations = [];
       treeAnimations = [];
-      animations.push({state: `Right Count: ${rightCount}`, nodeAnimations, treeAnimations})
       this.#resetGraph(nodeAnimations);
 
       if (!Number.isNaN(left)) {
@@ -318,6 +375,10 @@ export class AlgorithmService {
         });
         this.#nodeColors[left] = this.LISTEN_COLOR;
         this.#nodeSizes[left] = this.FOCUS_SIZE;
+        graph.updateNodeAttribute(`${left}`, 'energy', value => {
+          awake[value + 1]++;
+          return value + 1;
+        });
       }
       if (!Number.isNaN(right)) {
         nodeAnimations.push({
@@ -329,11 +390,18 @@ export class AlgorithmService {
         });
         this.#nodeColors[right] = this.SEND_COLOR;
         this.#nodeSizes[right] = this.FOCUS_SIZE;
+        graph.updateNodeAttribute(`${right}`, 'energy', value => {
+          awake[value + 1]++;
+          return value + 1;
+        });
       }
 
+
+      animations.push({state: `Right Count: ${rightCount}`, nodeAnimations, treeAnimations, ratio: this.#copyRatio(), energy: this.#newEnergy(awake)})
+
+      awake = this.#getAwakeObject();
       nodeAnimations = [];
       treeAnimations = [];
-      animations.push({state: `Total Count: ${totalCount}`, nodeAnimations, treeAnimations})
       this.#resetGraph(nodeAnimations);
 
       const current = !Number.isNaN(left) ? left : !Number.isNaN(right) ? right : undefined;
@@ -348,6 +416,10 @@ export class AlgorithmService {
         });
         this.#nodeColors[current] = this.SEND_COLOR;
         this.#nodeSizes[current] = this.FOCUS_SIZE;
+        graph.updateNodeAttribute(`${current}`, 'energy', value => {
+          awake[value + 1]++;
+          return value + 1;
+        });
         if (current != right && !Number.isNaN(right)) {
           nodeAnimations.push({
             node: right,
@@ -360,65 +432,97 @@ export class AlgorithmService {
           this.#nodeSizes[right] = this.DEFAULT_SIZE;
         }
         if (current == right) {
-          console.log(
-            'abc'
-          )
           graph.updateNodeAttribute(`${current}`, 'childCount', _ => 0)
         }
       }
 
       if (vertices[vertices.length - 1] != j) {
         const parent = Math.floor(j / 2);
+        const tempParent = level == 1 ? parent - 16 : parent;
+        const exp = level == 1 ? 1 : 3;
+        // console.log(tempParent)
+        const parentLevel = level == 1 ? 0 : Math.floor(Math.log2(tempParent));
+        const startGroup = 2 ** (exp - parentLevel) * (2 * tempParent + (parent == j / 2 ? 0 : 1)) - groupOffsets[level]!;
+        const endGroup = startGroup + 2 ** (exp - parentLevel) - 1; 
         const parentIndex = vertices.indexOf(parent);
         const leftGroup = left != null ? groups[left] : undefined;
         const rightGroup = right != null ? groups[right] : undefined;
+        // console.log(parentLevel, startGroup, endGroup, leftGroup, rightGroup);
         const id = Math.floor(Math.log2(vertices.length + 1) - Math.log2(vertices.length - parentIndex + 1)) + 1;
         // console.log(leftChild, rightChild, leftIndex, rightIndex, leftGroup, rightGroup, id);
         const leftNode = graph.nodes().filter(n => groups[+n] === leftGroup && graph.getNodeAttribute(n, 'id') === id)[0];
         const rightNode = graph.nodes().filter(n => groups[+n] === rightGroup && graph.getNodeAttribute(n, 'id') === id)[0];
-        console.log(left, right, leftGroup, rightGroup, id, leftNode, rightNode)
-        if (leftGroup != null && leftNode != null) {
-          graph.updateNodeAttribute(leftNode, 'count', _ => totalCount)
-          console.log('cc', totalCount, leftNode)
-          graph.updateNodeAttribute(leftNode, 'childCount', _ => totalCount)
-          nodeAnimations.push({
-            node: +leftNode,
-            from: this.#nodeColors[+leftNode],
-            to: this.LISTEN_COLOR,
-            fromSize: this.#nodeSizes[+leftNode],
-            toSize: this.FOCUS_SIZE
-          });
-          this.#nodeColors[+leftNode] = this.LISTEN_COLOR;
-          this.#nodeSizes[+leftNode] = this.FOCUS_SIZE;
-          this.#graphReset.push({
-            node: +leftNode,
-            from: this.#nodeColors[+leftNode],
-            to: 'lightgray',
-            fromSize: this.#nodeSizes[+leftNode],
-            toSize: this.DEFAULT_SIZE
-          })
+        // console.log(left, right, leftGroup, rightGroup, id, leftNode, rightNode)
+        for (let k = startGroup; k <= endGroup; k++) {
+          const groupNode = graph.nodes().filter(n => groups[+n] === k && graph.getNodeAttribute(n, 'id') === id)[0];
+          if (groupNode != null) {
+            graph.updateNodeAttribute(groupNode, 'count', _ => totalCount)
+            // console.log('cc', totalCount, leftNode)
+            graph.updateNodeAttribute(groupNode, 'childCount', _ => totalCount)
+            nodeAnimations.push({
+              node: +groupNode,
+              from: this.#nodeColors[+groupNode],
+              to: this.LISTEN_COLOR,
+              fromSize: this.#nodeSizes[+groupNode],
+              toSize: this.FOCUS_SIZE
+            });
+            this.#nodeColors[+groupNode] = this.LISTEN_COLOR;
+            this.#nodeSizes[+groupNode] = this.FOCUS_SIZE;
+            graph.updateNodeAttribute(`${+groupNode}`, 'energy', value => {
+              awake[value + 1]++;
+              return value + 1;
+            });
+            this.#graphReset.push({
+              node: +groupNode,
+              from: this.#nodeColors[+groupNode],
+              to: 'lightgray',
+              fromSize: this.#nodeSizes[+groupNode],
+              toSize: this.DEFAULT_SIZE
+            });
+          }
         }
-        if (rightGroup != null && rightNode != null) {
-          graph.updateNodeAttribute(rightNode, 'count', _ => totalCount)
-          console.log('dd')
-          graph.updateNodeAttribute(rightNode, 'childCount', _ => totalCount)
-          nodeAnimations.push({
-            node: +rightNode,
-            from: this.#nodeColors[+rightNode],
-            to: this.LISTEN_COLOR,
-            fromSize: this.#nodeSizes[+rightNode],
-            toSize: this.FOCUS_SIZE
-          });
-          this.#nodeColors[+rightNode] = this.LISTEN_COLOR;
-          this.#nodeSizes[+rightNode] = this.FOCUS_SIZE;
-          this.#graphReset.push({
-            node: +rightNode,
-            from: this.#nodeColors[+rightNode],
-            to: 'lightgray',
-            fromSize: this.#nodeSizes[+rightNode],
-            toSize: this.DEFAULT_SIZE
-          })
-        }
+        // if (leftGroup != null && leftNode != null) {
+        //   graph.updateNodeAttribute(leftNode, 'count', _ => totalCount)
+        //   // console.log('cc', totalCount, leftNode)
+        //   graph.updateNodeAttribute(leftNode, 'childCount', _ => totalCount)
+        //   nodeAnimations.push({
+        //     node: +leftNode,
+        //     from: this.#nodeColors[+leftNode],
+        //     to: this.LISTEN_COLOR,
+        //     fromSize: this.#nodeSizes[+leftNode],
+        //     toSize: this.FOCUS_SIZE
+        //   });
+        //   this.#nodeColors[+leftNode] = this.LISTEN_COLOR;
+        //   this.#nodeSizes[+leftNode] = this.FOCUS_SIZE;
+        //   this.#graphReset.push({
+        //     node: +leftNode,
+        //     from: this.#nodeColors[+leftNode],
+        //     to: 'lightgray',
+        //     fromSize: this.#nodeSizes[+leftNode],
+        //     toSize: this.DEFAULT_SIZE
+        //   })
+        // }
+        // if (rightGroup != null && rightNode != null) {
+        //   graph.updateNodeAttribute(rightNode, 'count', _ => totalCount)
+        //   // console.log('dd')
+        //   graph.updateNodeAttribute(rightNode, 'childCount', _ => totalCount)
+        //   nodeAnimations.push({
+        //     node: +rightNode,
+        //     from: this.#nodeColors[+rightNode],
+        //     to: this.LISTEN_COLOR,
+        //     fromSize: this.#nodeSizes[+rightNode],
+        //     toSize: this.FOCUS_SIZE
+        //   });
+        //   this.#nodeColors[+rightNode] = this.LISTEN_COLOR;
+        //   this.#nodeSizes[+rightNode] = this.FOCUS_SIZE;
+        //   this.#graphReset.push({
+        //     node: +rightNode,
+        //     from: this.#nodeColors[+rightNode],
+        //     to: 'lightgray',
+        //     fromSize: this.#nodeSizes[+rightNode],
+        //     toSize: this.DEFAULT_SIZE
+        //   })
+        // }
 
         this.#treeReset.push({
           node: j,
@@ -436,6 +540,9 @@ export class AlgorithmService {
           });
         }
       }
+
+      animations.push({state: `Total Count: ${totalCount}`, nodeAnimations, treeAnimations, ratio: this.#copyRatio(), energy: this.#newEnergy(awake)})
+
       count += 3;
     }
 
@@ -449,8 +556,8 @@ export class AlgorithmService {
       //  not quite right
       // const cameFromRight = !Number.isNaN(current) && +responsible[responsible.indexOf(`${current}`)] + 1 == current;
       const rightOffset = leftOffset + ((!Number.isNaN(current) && graph.getNodeAttribute(`${current}`, 'childCount')) ?? 0);
-      animations.push({state: `Left Offset: ${leftOffset}, Right Offset: ${rightOffset}`, nodeAnimations, treeAnimations})
-      console.log(leftOffset, rightOffset, !Number.isNaN(current) && graph.getNodeAttribute(`${current}`, 'count'), !Number.isNaN(current) && graph.getNodeAttribute(`${current}`, 'childCount'))
+      const awake = this.#getAwakeObject();
+      // console.log(leftOffset, rightOffset, !Number.isNaN(current) && graph.getNodeAttribute(`${current}`, 'count'), !Number.isNaN(current) && graph.getNodeAttribute(`${current}`, 'childCount'))
 
       this.#resetTree(treeAnimations);
       this.#resetGraph(nodeAnimations);
@@ -469,7 +576,13 @@ export class AlgorithmService {
 
       const rightChild = 2 * (count - 3 * vertices.length + 1) + 3 * vertices.length - 1;
       const leftChild = rightChild + 1;
+      
       if (!Number.isNaN(current)) {
+        let group = groups[current];
+        if (group % 2 == 1) {
+          group--;
+        }
+
         if (vertices[0] != j) {
           nodeAnimations.push({
             node: current,
@@ -480,6 +593,10 @@ export class AlgorithmService {
           });
           this.#nodeColors[current] = this.SEND_COLOR;
           this.#nodeSizes[current] = this.FOCUS_SIZE;
+          graph.updateNodeAttribute(`${current}`, 'energy', value => {
+            awake[value + 1]++;
+            return value + 1;
+          });
         }
         if (rightChild < responsible.length) {
           const leftNode = +responsible[leftChild];
@@ -493,6 +610,10 @@ export class AlgorithmService {
               to: this.LISTEN_COLOR,
               fromSize: this.#nodeSizes[leftNode],
               toSize: this.FOCUS_SIZE
+            });
+            graph.updateNodeAttribute(`${leftNode}`, 'energy', value => {
+              awake[value + 1]++;
+              return value + 1;
             });
             this.#nodeColors[leftNode] = this.LISTEN_COLOR;
             this.#nodeSizes[leftNode] = this.FOCUS_SIZE;
@@ -516,6 +637,10 @@ export class AlgorithmService {
             });
             this.#nodeColors[rightNode] = this.LISTEN_COLOR;
             this.#nodeSizes[rightNode] = this.FOCUS_SIZE;
+            graph.updateNodeAttribute(`${rightNode}`, 'energy', value => {
+              awake[value + 1]++;
+              return value + 1;
+            });
             if (+responsible[count + 1] != rightNode) {
               this.#graphReset.push({
                 node: rightNode,
@@ -527,11 +652,6 @@ export class AlgorithmService {
             }
           }
         } else {
-          let group = groups[current];
-          if (group % 2 == 1) {
-            group--;
-          }
-
           // console.log(current)
           for (let i = 0; i < groups.length; i++) {
             if (groups[i] == group || groups[i] == group + 1) {
@@ -545,13 +665,19 @@ export class AlgorithmService {
                 });
                 this.#nodeColors[i] = this.LISTEN_COLOR;
                 this.#nodeSizes[i] = this.FOCUS_SIZE;
-                this.#graphReset.push({
-                  node: i,
-                  from: this.#nodeColors[i],
-                  to: 'lightgray',
-                  fromSize: this.#nodeSizes[i],
-                  toSize: this.DEFAULT_SIZE
+                graph.updateNodeAttribute(`${i}`, 'energy', value => {
+                  awake[value + 1]++;
+                  return value + 1;
                 });
+                if (group != 0 || level != 2) {
+                  this.#graphReset.push({
+                    node: i,
+                    from: this.#nodeColors[i],
+                    to: 'lightgray',
+                    fromSize: this.#nodeSizes[i],
+                    toSize: this.DEFAULT_SIZE
+                  });
+                }
               }
               graph.updateNodeAttribute(`${i}`, 'id', id => id + (groups[i] == group ? leftOffset : rightOffset));
             }
@@ -568,17 +694,25 @@ export class AlgorithmService {
                 graph.updateNodeAttribute(`${j}`, 'offset', _ => 0);
               }
             }
+          } else {
+            animations[animations.length - 1].ratio = this.#newRatio(0, 0, total);
           }
         }
 
-        this.#graphReset.push({
-          node: current,
-          from: this.#nodeColors[current],
-          to: 'lightgray',
-          fromSize: this.#nodeSizes[current],
-          toSize: this.DEFAULT_SIZE
-        });
+        if (group != 0 || level != 2) {
+          this.#graphReset.push({
+            node: current,
+            from: this.#nodeColors[current],
+            to: 'lightgray',
+            fromSize: this.#nodeSizes[current],
+            toSize: this.DEFAULT_SIZE
+          });
+        }
       }
+
+      
+      animations.push({state: `Left Offset: ${leftOffset}, Right Offset: ${rightOffset}`, nodeAnimations, treeAnimations, ratio: this.#copyRatio(), energy: this.#newEnergy(awake)})
+
       count++;
     }
 
@@ -600,5 +734,47 @@ export class AlgorithmService {
     }
     nodeAnimations.push(...this.#graphReset);
     this.#graphReset = [];
+  }
+
+  #copyRatio(): [number, number, number] {
+    return [this.#ratio[0] / 5.12, this.#ratio[1] / 5.12, this.#ratio[2] / 5.12];
+  }
+
+  
+  #newRatio(a: number, b: number, c: number): [number, number, number] {
+    this.#ratio[0] += a;
+    this.#ratio[1] -= a;
+    this.#ratio[2] += b;
+    this.#ratio[1] -= b;
+    this.#ratio[0] -= c;
+    this.#ratio[2] += c;
+    return this.#copyRatio();
+  }
+
+  #copyEnergy(): number[] {
+    return this.#energy.slice();
+  }
+
+  #newEnergy(obj: Record<number, number>): number[] {
+    for (let key in obj) {
+      const k = +key;
+      // console.log(k, obj[k])
+      if (k == 0) {
+        this.#energy[0] += obj[k];
+      } else {
+        this.#energy[k - 1] -= obj[k];
+        this.#energy[k] += obj[k];
+      }
+    }
+    // console.log(this.#energy)
+    return this.#copyEnergy();
+  }
+
+  #getAwakeObject(): Record<number, number> {
+    const awake: Record<number, number> = {};
+    for (let i = 0; i <= 12; i++) {
+      awake[i] = 0
+    }
+    return awake;
   }
 }

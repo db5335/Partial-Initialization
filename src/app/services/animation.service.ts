@@ -8,6 +8,8 @@ import { Subject, firstValueFrom, take } from 'rxjs';
 })
 export class AnimationService {
   state = new Subject<string | undefined>();
+  ratio = new Subject<[number, number, number]>();
+  energy = new Subject<number[]>();
 
   #animations!: GraphAnimation[];
   #graph!: Graph;
@@ -36,10 +38,13 @@ export class AnimationService {
     this.#running = true;
 
     if (this.#step >= this.#animations.length) {
+      this.#running = false;
       return;
     }
 
     this.state.next(this.#animations[this.#step].state)
+    this.ratio.next(this.#animations[this.#step].ratio)
+    this.energy.next(this.#animations[this.#step].energy)
 
     for (let n of this.#animations[this.#step].nodeAnimations) {
       this.#graph.updateNode(`${n.node}`, a => {
@@ -82,6 +87,8 @@ export class AnimationService {
     
     if (this.#step != index) {
       this.state.next(this.#animations[Math.max(index - 1, 0)].state)
+      this.ratio.next(this.#animations[Math.max(index - 1, 0)].ratio)
+      this.energy.next(this.#animations[Math.max(index - 1, 0)].energy)
       if (this.#step > index) {
         while (this.#step != index) {
           for (let n of this.#animations[this.#step - 1].nodeAnimations.slice().reverse()) {

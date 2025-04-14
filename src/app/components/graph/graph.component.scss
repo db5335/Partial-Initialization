@@ -1,3 +1,69 @@
+.metadata {
+    display: flex;
+    flex-direction: column;
+    // margin-bottom: 1rem;
+    margin-left: 2rem;
+    margin-right: 2rem;
+    margin-top: 1rem;
+    // gap: 4rem;
+    align-items: center;
+
+    .counter-container, .energy-container {
+        display: flex;
+        flex-direction: column;
+        width: 50%;
+
+        div {
+            width: 100%;
+            display: flex;
+
+            span {
+                font-weight: 500;
+            }
+
+            span:last-of-type {
+                margin-left: auto;
+            }
+        }
+
+        // .counter-labels, .energy-labels {
+        //     margin-left: 0.5rem;
+        //     margin-right: 0.5rem;
+        // }
+
+        >span {
+            width: 100%;
+            text-align: center;
+            font-size: larger;
+            font-weight: 500;
+        }
+    }
+
+    .counter, .energy {
+        display: flex;
+        flex-direction: row;
+        height: 1rem;
+        border: 2px solid black;
+        border-radius: 0.5rem;
+        overflow: hidden;
+
+        .initialized {
+            height: 100%;
+            background-color: blue;
+        }
+
+        .unknown {
+            height: 100%;
+            background-color: lightgray;
+        }
+
+        .uninitialized {
+            height: 100%;
+            background-color: red;
+        }
+    }
+}
+
 .graph-container {
     display: flex;
 

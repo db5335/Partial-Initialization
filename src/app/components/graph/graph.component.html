@@ -2,6 +2,36 @@
     <h3>{{ state ?? 'State' }}</h3>
 </div>
 
+
+<div class="metadata">
+    <div class="counter-container">
+        <span>Nodes Initialized</span>
+        <div class="counter">
+            <div class="initialized" [ngStyle]="{ width : initialized + '%' }"></div>
+            <div class="unknown" [ngStyle]="{ width : unknown + '%' }"></div>
+            <div class="uninitialized" [ngStyle]="{ width : uninitialized + '%' }"></div>
+        </div>
+        <div class="counter-labels">
+            <span>0</span>
+            <span>512</span>
+        </div>
+    </div>
+
+
+    <div class="energy-container">
+        <span>Energy Spent</span>
+        <div class="energy">
+            <!-- <div *ngFor="let value of energy;" [ngStyle]="{ width : '8.33%', background : 'rgb(' + (255 - value / 2) + ', 255, ' + (255 - value / 2) + ')' }"></div> -->
+            <div *ngFor="let value of energy;" [ngStyle]="{ width : '7.69%', background : 'rgb(' + getColor(value)  + ', ' + getColor(value) + ', ' + getColor(value) + ')' }"></div>
+        </div>
+        <div class="counter-labels">
+            <span>64</span>
+            <span>76</span>
+        </div>
+    </div>
+</div>
+
+
 <div class="graph-container">
     <div id="graph" class="graph"></div>
     <div id="tree" class="graph"></div>
@@ -11,6 +41,6 @@
 (input)="goTo(+range.value)">
 <!-- oninput="rangeValue.innerText = 'Go to ' + value" (input)="goTo(+range.value)"> -->
 
-<button class="btn btn-primary">Play</button>
-<!-- <button class="btn btn-primary" (click)="play()">Play</button> -->
+<!-- <button class="btn btn-primary">Play</button> -->
+<button class="btn btn-primary" (click)="play()">Play</button>
 

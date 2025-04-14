@@ -17,6 +17,12 @@ export class GraphComponent implements OnInit {
   animations: GraphAnimation[] = [];
   state?: string
 
+  initialized = 0;
+  unknown = 100;
+  uninitialized = 0;
+
+  energy: number[] = [];
+
   constructor(
     private _algorithmService: AlgorithmService,
     private _animationService: AnimationService
@@ -32,10 +38,16 @@ export class GraphComponent implements OnInit {
     this._algorithmService.createBinaryTree(this.tree);
     this.animations = this._algorithmService.initialize(this.graph, this.tree);
     this._animationService.state.subscribe((value) => this.state = value);
+    this._animationService.ratio.subscribe((value) => {
+      this.initialized = value[0];
+      this.unknown = value[1];
+      this.uninitialized = value[2];
+    });
+    this._animationService.energy.subscribe((value) => this.energy = value);
     this._animationService.update(this.graph, this.tree, this.animations);
     this._animationService.animate();
 
-    console.log(this.animations);
+    // console.log(this.animations);
 
     const sigmaInstance1 = new Sigma(this.graph, document.getElementById("graph")!, {
       defaultNodeType: "border",
@@ -68,6 +80,14 @@ export class GraphComponent implements OnInit {
 
   play(): void {
     this._animationService.animate();
+  }
+
+  getColor(value: number): number {
+    if (value == 0) {
+      return 255;
+    } else {
+      return (512 - value) / 2.25
+    }
   }
 }
 
